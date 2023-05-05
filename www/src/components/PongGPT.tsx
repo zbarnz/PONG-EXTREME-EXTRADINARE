@@ -1,46 +1,42 @@
 import React, { useRef, useEffect, useState } from "react";
 
+
+
 interface GameState {
   ball: { x: number; y: number; dx: number; dy: number; radius: number };
-  paddle1: { x: number; y: number; width: number; height: number };
-  paddle2: { x: number; y: number; width: number; height: number };
+  // paddle2: { x: number; y: number; width: number; height: number };
 }
 
 const PongGPT: React.FC = () => {
+  let CANVAS_WIDTH = 500
+var CANVAS_HEIGHT = 300
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>();
   const gameStateRef = useRef<GameState>({
     ball: { x: 50, y: 50, dx: 2, dy: 2, radius: 5 },
-    paddle1: { x: 10, y: 100, width: 10, height: 400 },
-    paddle2: { x: 480, y: 100, width: 10, height: 400 },
+    // paddle2: { x: 480, y: 100, width: 10, height: 50 },
   });
-  const [movingPaddle, setMovingPaddle] = useState({
+  const [paddle1, setPaddle1] = useState({
     x: 10,
     y: 100,
     width: 10,
-    height: 400,
+    height: 50,
+  });
+  const [paddle2, setPaddle2] = useState({
+    x: 480,
+    y: 100,
+    width: 10,
+    height: 50,
   });
 
   const [mousePos, setMousePos] = useState({});
-
-  useEffect(() => {
-    const handleMouseMove = (event: any) => {
-      setMousePos({ x: event.clientX, y: event.clientY });
-      setMovingPaddle({ ...movingPaddle, y: event.clientY });
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, []);
 
   const draw = (ctx: CanvasRenderingContext2D, gameState: GameState) => {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     ctx.fillStyle = "black";
 
-    const { ball, paddle1, paddle2 } = gameState;
+    const { ball } = gameState;
 
     // Draw ball
     ctx.beginPath();
@@ -48,18 +44,18 @@ const PongGPT: React.FC = () => {
     ctx.closePath();
     ctx.fill();
 
+    setPaddle2({ ...paddle2, y: ball.y - 40 * Math.random() });
+
+    setPaddle1({ ...paddle1, y: ball.y - 10 });
+
     // Draw paddles
-    ctx.fillRect(
-      movingPaddle.x,
-      movingPaddle.y,
-      movingPaddle.width,
-      movingPaddle.height
-    );
+    ctx.fillRect(paddle1.x, paddle1.y, paddle1.width, paddle1.height);
     ctx.fillRect(paddle2.x, paddle2.y, paddle2.width, paddle2.height);
   };
 
   const update = (gameState: GameState) => {
-    const { ball, paddle1, paddle2 } = gameState;
+    const { ball } = gameState;
+    console.log(paddle1);
 
     ball.x += ball.dx;
     ball.y += ball.dy;
@@ -71,9 +67,9 @@ const PongGPT: React.FC = () => {
 
     // Collision detection with paddles
     if (
-      (ball.x - ball.radius <= movingPaddle.x + movingPaddle.width &&
-        ball.y >= movingPaddle.y &&
-        ball.y <= movingPaddle.y + movingPaddle.height) ||
+      (ball.x - ball.radius <= paddle1.x + paddle1.width &&
+        ball.y >= paddle1.y &&
+        ball.y <= paddle1.y + paddle1.height) ||
       (ball.x + ball.radius >= paddle2.x &&
         ball.y >= paddle2.y &&
         ball.y <= paddle2.y + paddle2.height)
@@ -105,24 +101,38 @@ const PongGPT: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleMouseMove = (event: any) => {
+      if (canvasRef.current !== null) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        setMousePos({ x: event.clientX, y: event.clientY - rect.top });
+        setPaddle1({
+          ...paddle1,
+          y: event.clientY - rect.top - paddle1.height / 2,
+        });
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+
     requestRef.current = requestAnimationFrame(loop);
     return () => {
       if (requestRef.current) {
+        window.removeEventListener("mousemove", handleMouseMove);
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, []);
+  }, [paddle1, paddle2]);
 
   return (
     <>
       <canvas
         ref={canvasRef}
-        width="500"
-        height="300"
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
         style={{ border: "1px solid black" }}
       />
       <p>
-        {movingPaddle.x},{movingPaddle.y}
+        {paddle1.x},{paddle1.y}
       </p>
     </>
   );
